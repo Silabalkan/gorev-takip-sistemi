@@ -1,0 +1,12 @@
+bin/
+obj/
+*.user
+.vscode/
+*.suo
+*.log
+*.tmp
+*.temp
+*.bak
+.publish/
+.env
+node_modules/
