@@ -1,0 +1,85 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Giriş Yap</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f5f7fa;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .card {
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card col-md-4">
+        <h2 class="text-center mb-4">Giriş Yap</h2>
+        <form id="loginForm">
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="email" required placeholder="ornek@site.com">
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Şifre</label>
+                <input type="password" class="form-control" id="password" required placeholder="Şifreniz">
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Giriş Yap</button>
+            <div class="text-center mt-3">
+                <a href="register.html">Hesabın yok mu? Kayıt Ol</a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const form = document.getElementById('loginForm');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                console.log('🔵 Giriş isteği gönderiliyor...');
+
+                const response = await fetch('http://localhost:7160/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email: email, password: password })
+                });
+
+                console.log('🟢 Cevap geldi:', response);
+
+                if (response.ok) {
+                    const user = await response.json();
+                    console.log('✅ Giriş başarılı, kullanıcı:', user);
+                    localStorage.setItem('user', JSON.stringify(user));
+                    alert('Giriş başarılı! Ana sayfaya yönlendiriliyorsunuz.');
+                    window.location.href = 'index.html';
+
+                } else {
+                    console.log('❗ Giriş başarısız! Response:', response);
+                    alert('Giriş başarısız! Email veya şifre hatalı.');
+                }
+            } catch (error) {
+                console.error('❌ Fetch hatası:', error);
+                alert('Sunucuya bağlanılamadı. Lütfen API çalışıyor mu kontrol et.');
+            }
+        });
+
+    </script>
+
+</body>
+</html>

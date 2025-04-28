@@ -1,0 +1,275 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Görev Takip Sistemi</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f5f7fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .card {
+            border: none;
+            box-shadow: 0px 4px 8px rgba(0,0,0,0.1);
+            border-radius: 12px;
+        }
+
+        .task-completed {
+            background-color: #d4edda;
+        }
+
+        .task-pending {
+            background-color: #fff3cd;
+        }
+
+        .alert {
+            border-radius: 12px;
+        }
+
+        h1, h2 {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <script>
+        if (!localStorage.getItem('user')) {
+            window.location.href = 'login.html';
+        }
+
+        function logout() {
+            localStorage.removeItem('user');
+            window.location.href = 'login.html';
+        }
+    </script>
+
+    <div class="container mt-5 position-relative">
+        <h1 class="text-center mb-4">Görev Takip Sistemi</h1>
+
+        <!-- DÜZELTİLEN BUTON GRUBU -->
+        <div style="position: absolute; top: 20px; right: 30px; display: flex; align-items: center; gap: 10px;">
+            <button onclick="logout()" class="btn btn-danger">
+                🚪 Çıkış Yap
+            </button>
+
+            <button id="notificationBtn" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                🔔 Bildirimler
+            </button>
+        </div>
+
+        <button id="newTaskBtn" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#taskModal" style="position: absolute; top: 20px; left: 30px;">
+            ➕ Yeni Görev
+        </button>
+
+        <div id="taskList" class="mt-4">
+            <!-- Görevler burada listelenecek -->
+        </div>
+    </div>
+
+    <!-- MODALLAR -->
+    <div class="modal fade" id="taskModal" tabindex="-1" aria-labelledby="taskModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="taskModalLabel">Yeni Görev Ekle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="taskForm">
+                        <input type="hidden" id="taskId">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Başlık</label>
+                            <input type="text" class="form-control" id="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Açıklama</label>
+                            <textarea class="form-control" id="description" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="dueDate" class="form-label">Bitiş Tarihi</label>
+                            <input type="date" class="form-control" id="dueDate" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Kaydet</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="notificationModal" tabindex="-1" aria-labelledby="notificationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="notificationModalLabel">Bildirimler</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                </div>
+                <div class="modal-body" id="notificationList">
+                    <!-- Bildirimler burada listelenecek -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- GÖREV VE BİLDİRİM SCRIPT'LERİ BURADA -->
+    <script>
+        async function loadTasks() {
+            const response = await fetch('http://localhost:7160/api/task');
+            const tasks = await response.json();
+
+            const taskList = document.getElementById('taskList');
+            taskList.innerHTML = '';
+
+            tasks.forEach(task => {
+                const taskDiv = document.createElement('div');
+                taskDiv.className = `card mb-3 p-3 ${task.status ? 'task-completed' : 'task-pending'}`;
+                taskDiv.innerHTML = `
+                        <h5>${task.title}</h5>
+                        <p>${task.description}</p>
+                        <p><strong>Durum:</strong> ${task.status ? '✅ Tamamlandı' : '⌛ Devam Ediyor'}</p>
+                        <p><strong>Bitiş Tarihi:</strong> ${new Date(task.dueDate).toLocaleDateString()}</p>
+                    `;
+
+                const btnGroup = document.createElement('div');
+                btnGroup.className = 'mt-2 d-flex gap-2 flex-wrap';
+
+                if (!task.status) {
+                    const completeButton = document.createElement('button');
+                    completeButton.className = 'btn btn-success';
+                    completeButton.textContent = 'Tamamla';
+                    completeButton.onclick = async () => {
+                        await completeTask(task.id);
+                    };
+                    btnGroup.appendChild(completeButton);
+                }
+
+                const updateButton = document.createElement('button');
+                updateButton.className = 'btn btn-warning';
+                updateButton.textContent = 'Güncelle';
+                updateButton.onclick = () => {
+                    openUpdateModal(task);
+                };
+                btnGroup.appendChild(updateButton);
+
+                const deleteButton = document.createElement('button');
+                deleteButton.className = 'btn btn-danger';
+                deleteButton.textContent = 'Sil';
+                deleteButton.onclick = async () => {
+                    await deleteTask(task.id);
+                };
+                btnGroup.appendChild(deleteButton);
+
+                taskDiv.appendChild(btnGroup);
+                taskList.appendChild(taskDiv);
+            });
+        }
+
+        async function completeTask(taskId) {
+            const getResponse = await fetch(`http://localhost:7160/api/task/${taskId}`);
+            const task = await getResponse.json();
+            task.status = true;
+
+            await fetch(`http://localhost:7160/api/task/${taskId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(task)
+            });
+
+            loadTasks();
+            loadNotifications();
+        }
+
+        async function deleteTask(taskId) {
+            await fetch(`http://localhost:7160/api/task/${taskId}`, {
+                method: 'DELETE'
+            });
+
+            loadTasks();
+            loadNotifications();
+        }
+
+        function openUpdateModal(task) {
+            document.getElementById('taskId').value = task.id;
+            document.getElementById('title').value = task.title;
+            document.getElementById('description').value = task.description;
+            document.getElementById('dueDate').value = task.dueDate.split('T')[0];
+
+            const taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
+            taskModal.show();
+        }
+
+        const form = document.getElementById('taskForm');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const taskId = document.getElementById('taskId').value;
+            const title = document.getElementById('title').value;
+            const description = document.getElementById('description').value;
+            const dueDate = document.getElementById('dueDate').value;
+
+            const user = JSON.parse(localStorage.getItem('user'));
+
+            const taskData = {
+                title,
+                description,
+                dueDate,
+                status: false,
+                userId: user.id
+            };
+
+            if (taskId) {
+                await fetch(`http://localhost:7160/api/task/${taskId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: taskId, ...taskData })
+                });
+            } else {
+                await fetch('http://localhost:7160/api/task', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(taskData)
+                });
+            }
+
+            form.reset();
+            const modalElement = document.getElementById('taskModal');
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            modal.hide();
+
+            loadTasks();
+            loadNotifications();
+        });
+
+        async function loadNotifications() {
+            const response = await fetch('http://localhost:7160/api/notification');
+            const notifications = await response.json();
+
+            const notificationList = document.getElementById('notificationList');
+            notificationList.innerHTML = '';
+
+            if (notifications.length === 0) {
+                notificationList.innerHTML = `<p class="text-center text-muted">Henüz bildirim yok.</p>`;
+                return;
+            }
+
+            notifications.forEach(notification => {
+                const notificationDiv = document.createElement('div');
+                notificationDiv.className = 'alert alert-primary mb-2';
+                notificationDiv.innerHTML = `
+                        <strong>${notification.message}</strong>
+                        <br><small>${new Date(notification.createdDate).toLocaleString()}</small>
+                    `;
+                notificationList.appendChild(notificationDiv);
+            });
+        }
+
+        loadTasks();
+        loadNotifications();
+    </script>
+
+</body>
+</html>
