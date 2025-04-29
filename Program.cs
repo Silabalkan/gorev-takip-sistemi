@@ -14,7 +14,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHostedService<TaskCheckBackgroundService>();
 
-// 👉 CORS Policy Ekliyoruz:
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -27,7 +27,7 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// 👉 CORS'u kullanıyoruz:
+
 app.UseCors("AllowAll");
 
 // Configure the HTTP request pipeline.

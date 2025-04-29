@@ -48,9 +48,9 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
 
-            // Backend'in istediği yapıya uygun yeni kullanıcı nesnesi
+            
             const newUser = {
-                name: "Yeni Kullanıcı",  // Burayı istersen dinamik de yapabiliriz (şu an sabit)
+                name: "Yeni Kullanıcı",  
                 email: email,
                 passwordHash: password,
                 sessionExpireDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString() // Şu andan 1 yıl sonrası
