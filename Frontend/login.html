@@ -50,7 +50,7 @@
             const password = document.getElementById('password').value;
 
             try {
-                console.log('🔵 Giriş isteği gönderiliyor...');
+                console.log(' Giriş isteği gönderiliyor');
 
                 const response = await fetch('http://localhost:7160/api/auth/login', {
                     method: 'POST',
@@ -60,22 +60,22 @@
                     body: JSON.stringify({ email: email, password: password })
                 });
 
-                console.log('🟢 Cevap geldi:', response);
+                console.log(' Cevap geldi:', response);
 
                 if (response.ok) {
                     const user = await response.json();
-                    console.log('✅ Giriş başarılı, kullanıcı:', user);
+                    console.log('Giriş başarılı, kullanıcı:', user);
                     localStorage.setItem('user', JSON.stringify(user));
                     alert('Giriş başarılı! Ana sayfaya yönlendiriliyorsunuz.');
                     window.location.href = 'index.html';
 
                 } else {
-                    console.log('❗ Giriş başarısız! Response:', response);
+                    console.log(' Giriş başarısız! Response:', response);
                     alert('Giriş başarısız! Email veya şifre hatalı.');
                 }
             } catch (error) {
-                console.error('❌ Fetch hatası:', error);
-                alert('Sunucuya bağlanılamadı. Lütfen API çalışıyor mu kontrol et.');
+                console.error(' Fetch hatası:', error);
+                alert('Sunucuya bağlanılamadı. API çalışıyor mu kontrol et.');
             }
         });
 
