@@ -1,27 +1,49 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using kullaniciGorevTakipSistemi.DataAccess;
 using kullaniciGorevTakipSistemi.Entities;
-using Microsoft.EntityFrameworkCore;
 
 namespace kullaniciGorevTakipSistemi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class TaskController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly ILogger<TaskController> _logger;
 
-        public TaskController(AppDbContext context)
+        public TaskController(AppDbContext context, ILogger<TaskController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
-        // Tüm görevleri getir
+        // Giriş yapan kullanıcının görevlerini getir
         [HttpGet]
         public async Task<IActionResult> GetAllTasks()
         {
-            var tasks = await _context.Tasks.ToListAsync();
-            return Ok(tasks);
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null)
+                    return Unauthorized("Kullanıcı doğrulanamadı.");
+
+                int userId = int.Parse(userIdClaim.Value);
+
+                var tasks = await _context.Tasks
+                    .Where(t => t.UserId == userId)
+                    .ToListAsync();
+
+                return Ok(tasks);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Görevleri getirirken hata oluştu.");
+                return StatusCode(500, "Sunucu hatası.");
+            }
         }
 
         [HttpGet("{id}")]
@@ -34,14 +56,27 @@ namespace kullaniciGorevTakipSistemi.Controllers
             return Ok(task);
         }
 
-
-        // Yeni görev ekle
         [HttpPost]
         public async Task<IActionResult> CreateTask(TaskItem taskItem)
         {
-            _context.Tasks.Add(taskItem);
-            await _context.SaveChangesAsync();
-            return Ok(taskItem);
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null)
+                    return Unauthorized("Kullanıcı doğrulanamadı.");
+
+                taskItem.UserId = int.Parse(userIdClaim.Value);
+
+                _context.Tasks.Add(taskItem);
+                await _context.SaveChangesAsync();
+
+                return Ok(taskItem);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Görev oluşturulurken hata oluştu.");
+                return StatusCode(500, "Sunucu hatası.");
+            }
         }
 
         [HttpPut("{id}")]
@@ -60,8 +95,6 @@ namespace kullaniciGorevTakipSistemi.Controllers
             return Ok(task);
         }
 
-
-        // Görev sil
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTask(int id)
         {
@@ -74,7 +107,6 @@ namespace kullaniciGorevTakipSistemi.Controllers
             return Ok();
         }
 
-        
         [HttpPatch("{id}/complete")]
         public async Task<IActionResult> CompleteTask(int id)
         {
@@ -82,11 +114,10 @@ namespace kullaniciGorevTakipSistemi.Controllers
             if (task == null)
                 return NotFound();
 
-            task.Status = true; 
+            task.Status = true;
             await _context.SaveChangesAsync();
 
             return Ok(task);
         }
-
     }
 }

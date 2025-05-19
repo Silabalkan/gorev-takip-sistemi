@@ -4,6 +4,7 @@ using System.Text;
 using kullaniciGorevTakipSistemi.BackgroundJobs;
 using kullaniciGorevTakipSistemi.DataAccess;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,7 +13,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // JWT Ayarları
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "supersecretkey123456"; // Eğer appsettings yoksa
+var jwtKey = builder.Configuration["Jwt:Key"] ?? "supersecretkey123456";
 var keyBytes = Encoding.UTF8.GetBytes(jwtKey);
 
 builder.Services.AddAuthentication(options =>
@@ -32,11 +33,41 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// Swagger JWT Desteği ✅
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "kullaniciGorevTakipSistemi", Version = "v1" });
+
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        In = ParameterLocation.Header,
+        Description = "Lütfen 'Bearer' yazıp boşluk bırakıp token'ı girin",
+        Name = "Authorization",
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 builder.Services.AddHostedService<TaskCheckBackgroundService>();
 
+// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -57,10 +88,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-
-app.UseAuthentication(); // önce bu
-app.UseAuthorization();  // sonra bu
+app.UseAuthentication();  // JWT kontrolü burada
+app.UseAuthorization();
 
 app.MapControllers();
-
 app.Run();
