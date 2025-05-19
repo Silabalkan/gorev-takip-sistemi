@@ -2,6 +2,8 @@
 using kullaniciGorevTakipSistemi.DataAccess;
 using kullaniciGorevTakipSistemi.Entities;
 using Microsoft.EntityFrameworkCore;
+using kullaniciGorevTakipSistemi.Helpers;
+
 
 namespace kullaniciGorevTakipSistemi.Controllers
 {
@@ -10,46 +12,84 @@ namespace kullaniciGorevTakipSistemi.Controllers
     public class AuthController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly ILogger<AuthController> _logger;
+        private readonly IConfiguration _configuration;
 
-        public AuthController(AppDbContext context)
+
+        public AuthController(AppDbContext context, ILogger<AuthController> logger, IConfiguration configuration)
         {
             _context = context;
+            _logger = logger;
+            _configuration = configuration;
         }
 
-        // Kullanıcı Kayıt
+
+
+
         [HttpPost("register")]
         public async Task<IActionResult> Register(User user)
         {
-            var userExist = await _context.Users.FirstOrDefaultAsync(x => x.Email == user.Email);
-            if (userExist != null)
+            try
             {
-                return BadRequest("Bu e-posta zaten kayıtlı.");
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                var userExist = await _context.Users.FirstOrDefaultAsync(x => x.Email == user.Email);
+                if (userExist != null)
+                {
+                    return BadRequest("Bu e-posta zaten kayıtlı.");
+                }
+
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(user.PasswordHash);
+                await _context.Users.AddAsync(user);
+                await _context.SaveChangesAsync();
+
+                return Ok(user);
             }
-
-            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(user.PasswordHash);
-            await _context.Users.AddAsync(user);
-            await _context.SaveChangesAsync();
-
-            return Ok(user);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Kayıt olurken bir hata oluştu.");
+                return StatusCode(500, "Sunucu hatası.");
+            }
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(x => x.Email == request.Email);
-            if (user == null)
+            try
             {
-                return Unauthorized("Kullanıcı bulunamadı.");
-            }
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
 
-            bool passwordMatches = BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
-            if (!passwordMatches)
+                var user = await _context.Users.FirstOrDefaultAsync(x => x.Email == request.Email);
+                if (user == null)
+                    return Unauthorized("Kullanıcı bulunamadı.");
+
+                bool passwordMatches = BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
+                if (!passwordMatches)
+                    return Unauthorized("Şifre yanlış.");
+
+                var jwtKey = _configuration["Jwt:Key"]!;
+                var token = JwtHelper.GenerateJwtToken(user, jwtKey);
+
+                return Ok(new
+                {
+                    token,
+                    user = new
+                    {
+                        user.Id,
+                        user.Name,
+                        user.Email
+                    }
+                });
+            }
+            catch (Exception ex)
             {
-                return Unauthorized("Şifre yanlış.");
+                _logger.LogError(ex, "Giriş sırasında hata oluştu.");
+                return StatusCode(500, "Sunucu hatası.");
             }
-
-            return Ok(user);
         }
+
 
     }
 }

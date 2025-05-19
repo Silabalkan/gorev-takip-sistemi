@@ -1,19 +1,41 @@
-﻿using kullaniciGorevTakipSistemi.BackgroundJobs;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using kullaniciGorevTakipSistemi.BackgroundJobs;
 using kullaniciGorevTakipSistemi.DataAccess;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
+// Veritabanı
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// JWT Ayarları
+var jwtKey = builder.Configuration["Jwt:Key"] ?? "supersecretkey123456"; // Eğer appsettings yoksa
+var keyBytes = Encoding.UTF8.GetBytes(jwtKey);
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = false,
+        ValidateAudience = false,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(keyBytes)
+    };
+});
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHostedService<TaskCheckBackgroundService>();
-
 
 builder.Services.AddCors(options =>
 {
@@ -27,10 +49,7 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-
 app.UseCors("AllowAll");
-
-// Configure the HTTP request pipeline.
 
 if (app.Environment.IsDevelopment())
 {
@@ -38,7 +57,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseAuthorization();
+
+app.UseAuthentication(); // önce bu
+app.UseAuthorization();  // sonra bu
 
 app.MapControllers();
 

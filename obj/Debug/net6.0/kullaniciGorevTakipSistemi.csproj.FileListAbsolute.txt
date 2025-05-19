@@ -67,3 +67,5 @@ C:\egitim\kullaniciGorevTakipSistemi\obj\Debug\net6.0\kullaniciGorevTakipSistemi
 C:\egitim\kullaniciGorevTakipSistemi\obj\Debug\net6.0\kullaniciGorevTakipSistemi.genruntimeconfig.cache
 C:\egitim\kullaniciGorevTakipSistemi\obj\Debug\net6.0\ref\kullaniciGorevTakipSistemi.dll
 C:\egitim\kullaniciGorevTakipSistemi\bin\Debug\net6.0\BCrypt.Net-Next.dll
+C:\egitim\kullaniciGorevTakipSistemi\bin\Debug\net6.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
+C:\egitim\kullaniciGorevTakipSistemi\bin\Debug\net6.0\Microsoft.IdentityModel.Abstractions.dll
