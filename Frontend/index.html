@@ -114,163 +114,183 @@
             </div>
         </div>
     </div>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- GÖREV VE BİLDİRİM SCRIPT'LERİ BURADA -->
     <script>
-        async function loadTasks() {
-            const response = await fetch('http://localhost:7160/api/task');
-            const tasks = await response.json();
+        document.addEventListener("DOMContentLoaded", function () {
+            if (!localStorage.getItem('user')) {
+                window.location.href = 'login.html';
+            }
 
-            const taskList = document.getElementById('taskList');
-            taskList.innerHTML = '';
+            function logout() {
+                localStorage.removeItem('user');
+                window.location.href = 'login.html';
+            }
 
-            tasks.forEach(task => {
-                const taskDiv = document.createElement('div');
-                taskDiv.className = `card mb-3 p-3 ${task.status ? 'task-completed' : 'task-pending'}`;
-                taskDiv.innerHTML = `
-                        <h5>${task.title}</h5>
-                        <p>${task.description}</p>
-                        <p><strong>Durum:</strong> ${task.status ? '✅ Tamamlandı' : '⌛ Devam Ediyor'}</p>
-                        <p><strong>Bitiş Tarihi:</strong> ${new Date(task.dueDate).toLocaleDateString()}</p>
-                    `;
-
-                const btnGroup = document.createElement('div');
-                btnGroup.className = 'mt-2 d-flex gap-2 flex-wrap';
-
-                if (!task.status) {
-                    const completeButton = document.createElement('button');
-                    completeButton.className = 'btn btn-success';
-                    completeButton.textContent = 'Tamamla';
-                    completeButton.onclick = async () => {
-                        await completeTask(task.id);
-                    };
-                    btnGroup.appendChild(completeButton);
-                }
-
-                const updateButton = document.createElement('button');
-                updateButton.className = 'btn btn-warning';
-                updateButton.textContent = 'Güncelle';
-                updateButton.onclick = () => {
-                    openUpdateModal(task);
+            function authHeaders() {
+                const user = JSON.parse(localStorage.getItem('user'));
+                return {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + user.token
                 };
-                btnGroup.appendChild(updateButton);
+            }
 
-                const deleteButton = document.createElement('button');
-                deleteButton.className = 'btn btn-danger';
-                deleteButton.textContent = 'Sil';
-                deleteButton.onclick = async () => {
-                    await deleteTask(task.id);
-                };
-                btnGroup.appendChild(deleteButton);
-
-                taskDiv.appendChild(btnGroup);
-                taskList.appendChild(taskDiv);
-            });
-        }
-
-        async function completeTask(taskId) {
-            const getResponse = await fetch(`http://localhost:7160/api/task/${taskId}`);
-            const task = await getResponse.json();
-            task.status = true;
-
-            await fetch(`http://localhost:7160/api/task/${taskId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(task)
-            });
-
-            loadTasks();
-            loadNotifications();
-        }
-
-        async function deleteTask(taskId) {
-            await fetch(`http://localhost:7160/api/task/${taskId}`, {
-                method: 'DELETE'
-            });
-
-            loadTasks();
-            loadNotifications();
-        }
-
-        function openUpdateModal(task) {
-            document.getElementById('taskId').value = task.id;
-            document.getElementById('title').value = task.title;
-            document.getElementById('description').value = task.description;
-            document.getElementById('dueDate').value = task.dueDate.split('T')[0];
-
-            const taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
-            taskModal.show();
-        }
-
-        const form = document.getElementById('taskForm');
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const taskId = document.getElementById('taskId').value;
-            const title = document.getElementById('title').value;
-            const description = document.getElementById('description').value;
-            const dueDate = document.getElementById('dueDate').value;
-
-            const user = JSON.parse(localStorage.getItem('user'));
-
-            const taskData = {
-                title,
-                description,
-                dueDate,
-                status: false,
-                userId: user.id
-            };
-
-            if (taskId) {
-                await fetch(`http://localhost:7160/api/task/${taskId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: taskId, ...taskData })
+            async function loadTasks() {
+                const response = await fetch('http://localhost:7160/api/task', {
+                    headers: authHeaders()
                 });
-            } else {
-                await fetch('http://localhost:7160/api/task', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(taskData)
+                const tasks = await response.json();
+
+                const taskList = document.getElementById('taskList');
+                taskList.innerHTML = '';
+
+                tasks.forEach(task => {
+                    const taskDiv = document.createElement('div');
+                    taskDiv.className = `card mb-3 p-3 ${task.status ? 'task-completed' : 'task-pending'}`;
+                    taskDiv.innerHTML = `
+                                <h5>${task.title}</h5>
+                                <p>${task.description}</p>
+                                <p><strong>Durum:</strong> ${task.status ? '✅ Tamamlandı' : '⌛ Devam Ediyor'}</p>
+                                <p><strong>Bitiş Tarihi:</strong> ${new Date(task.dueDate).toLocaleDateString()}</p>
+                            `;
+
+                    const btnGroup = document.createElement('div');
+                    btnGroup.className = 'mt-2 d-flex gap-2 flex-wrap';
+
+                    if (!task.status) {
+                        const completeButton = document.createElement('button');
+                        completeButton.className = 'btn btn-success';
+                        completeButton.textContent = 'Tamamla';
+                        completeButton.onclick = async () => {
+                            await completeTask(task.id);
+                        };
+                        btnGroup.appendChild(completeButton);
+                    }
+
+                    const updateButton = document.createElement('button');
+                    updateButton.className = 'btn btn-warning';
+                    updateButton.textContent = 'Güncelle';
+                    updateButton.onclick = () => {
+                        openUpdateModal(task);
+                    };
+                    btnGroup.appendChild(updateButton);
+
+                    const deleteButton = document.createElement('button');
+                    deleteButton.className = 'btn btn-danger';
+                    deleteButton.textContent = 'Sil';
+                    deleteButton.onclick = async () => {
+                        await deleteTask(task.id);
+                    };
+                    btnGroup.appendChild(deleteButton);
+
+                    taskDiv.appendChild(btnGroup);
+                    taskList.appendChild(taskDiv);
                 });
             }
 
-            form.reset();
-            const modalElement = document.getElementById('taskModal');
-            const modal = bootstrap.Modal.getInstance(modalElement);
-            modal.hide();
+            async function completeTask(taskId) {
+                const getResponse = await fetch(`http://localhost:7160/api/task/${taskId}`, {
+                    headers: authHeaders()
+                });
+                const task = await getResponse.json();
+                task.status = true;
+
+                await fetch(`http://localhost:7160/api/task/${taskId}`, {
+                    method: 'PUT',
+                    headers: authHeaders(),
+                    body: JSON.stringify(task)
+                });
+
+                loadTasks();
+                loadNotifications();
+            }
+
+            async function deleteTask(taskId) {
+                await fetch(`http://localhost:7160/api/task/${taskId}`, {
+                    method: 'DELETE',
+                    headers: authHeaders()
+                });
+
+                loadTasks();
+                loadNotifications();
+            }
+
+            function openUpdateModal(task) {
+                document.getElementById('taskId').value = task.id;
+                document.getElementById('title').value = task.title;
+                document.getElementById('description').value = task.description;
+                document.getElementById('dueDate').value = task.dueDate.split('T')[0];
+
+                const taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
+                taskModal.show();
+            }
+
+            const form = document.getElementById('taskForm');
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const taskId = document.getElementById('taskId').value;
+                const title = document.getElementById('title').value;
+                const description = document.getElementById('description').value;
+                const dueDate = document.getElementById('dueDate').value;
+
+                const taskData = {
+                    title,
+                    description,
+                    dueDate,
+                    status: false
+                };
+
+                if (taskId) {
+                    await fetch(`http://localhost:7160/api/task/${taskId}`, {
+                        method: 'PUT',
+                        headers: authHeaders(),
+                        body: JSON.stringify({ id: taskId, ...taskData })
+                    });
+                } else {
+                    await fetch('http://localhost:7160/api/task', {
+                        method: 'POST',
+                        headers: authHeaders(),
+                        body: JSON.stringify(taskData)
+                    });
+                }
+
+                form.reset();
+                const modalElement = document.getElementById('taskModal');
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                modal.hide();
+
+                loadTasks();
+                loadNotifications();
+            });
+
+            async function loadNotifications() {
+                const response = await fetch('http://localhost:7160/api/notification', {
+                    headers: authHeaders()
+                });
+                const notifications = await response.json();
+
+                const notificationList = document.getElementById('notificationList');
+                notificationList.innerHTML = '';
+
+                if (notifications.length === 0) {
+                    notificationList.innerHTML = `<p class="text-center text-muted">Henüz bildirim yok.</p>`;
+                    return;
+                }
+
+                notifications.forEach(notification => {
+                    const notificationDiv = document.createElement('div');
+                    notificationDiv.className = 'alert alert-primary mb-2';
+                    notificationDiv.innerHTML = `
+                                <strong>${notification.message}</strong>
+                                <br><small>${new Date(notification.createdDate).toLocaleString()}</small>
+                            `;
+                    notificationList.appendChild(notificationDiv);
+                });
+            }
 
             loadTasks();
             loadNotifications();
         });
-
-        async function loadNotifications() {
-            const response = await fetch('http://localhost:7160/api/notification');
-            const notifications = await response.json();
-
-            const notificationList = document.getElementById('notificationList');
-            notificationList.innerHTML = '';
-
-            if (notifications.length === 0) {
-                notificationList.innerHTML = `<p class="text-center text-muted">Henüz bildirim yok.</p>`;
-                return;
-            }
-
-            notifications.forEach(notification => {
-                const notificationDiv = document.createElement('div');
-                notificationDiv.className = 'alert alert-primary mb-2';
-                notificationDiv.innerHTML = `
-                        <strong>${notification.message}</strong>
-                        <br><small>${new Date(notification.createdDate).toLocaleString()}</small>
-                    `;
-                notificationList.appendChild(notificationDiv);
-            });
-        }
-
-        loadTasks();
-        loadNotifications();
     </script>
 
 </body>
