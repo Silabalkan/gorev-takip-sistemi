@@ -68,6 +68,14 @@ namespace kullaniciGorevTakipSistemi.Controllers
                 taskItem.UserId = int.Parse(userIdClaim.Value);
 
                 _context.Tasks.Add(taskItem);
+                var notification = new Notification
+                {
+                    UserId = taskItem.UserId,
+                    Message = $"Yeni görev eklendi: {taskItem.Title}",
+                    CreatedDate = DateTime.Now
+                };
+                _context.Notifications.Add(notification);
+
                 await _context.SaveChangesAsync();
 
                 return Ok(taskItem);

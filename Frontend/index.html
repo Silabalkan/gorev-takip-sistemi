@@ -92,7 +92,7 @@
                         </div>
                         <div class="mb-3">
                             <label for="dueDate" class="form-label">Bitiş Tarihi</label>
-                            <input type="date" class="form-control" id="dueDate" required>
+                            <input type="date" class="form-control" id="dueDate" required min="">
                         </div>
                         <button type="submit" class="btn btn-primary w-100">Kaydet</button>
                     </form>
@@ -186,6 +186,11 @@
                     taskList.appendChild(taskDiv);
                 });
             }
+            //tarih min günümüzden başlasın
+            const dueDateInput = document.getElementById('dueDate');
+            const today = new Date().toISOString().split("T")[0];
+            dueDateInput.setAttribute("min", today);
+
 
             async function completeTask(taskId) {
                 const getResponse = await fetch(`http://localhost:7160/api/task/${taskId}`, {
