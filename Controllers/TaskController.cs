@@ -56,6 +56,7 @@ namespace kullaniciGorevTakipSistemi.Controllers
             return Ok(task);
         }
 
+        // Yeni görev oluştur
         [HttpPost]
         public async Task<IActionResult> CreateTask(TaskItem taskItem)
         {
@@ -65,9 +66,17 @@ namespace kullaniciGorevTakipSistemi.Controllers
                 if (userIdClaim == null)
                     return Unauthorized("Kullanıcı doğrulanamadı.");
 
+                
+                if (taskItem.DueDate.Date < DateTime.Today)
+                {
+                    return BadRequest("Geçmiş tarihe görev eklenemez.");
+                }
+
                 taskItem.UserId = int.Parse(userIdClaim.Value);
 
                 _context.Tasks.Add(taskItem);
+
+                
                 var notification = new Notification
                 {
                     UserId = taskItem.UserId,
